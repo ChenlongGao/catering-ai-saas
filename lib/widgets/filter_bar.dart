@@ -8,14 +8,45 @@ class FilterBar extends StatefulWidget {
   final ValueChanged<String> onStore;
 
   static const periods = ['今日', '昨日', '近7天', '近30天'];
-  static const regions = ['全部门店', '华中区', '华东区', '华南区', '华北区', '西南区'];
-  static const stores = {
-    '华中区': ['全选', '茶颜悦色·太平街店', '茶颜悦色·五一广场店', '茶颜悦色·解放西路店', '茶颜悦色·江汉路店', '茶颜悦色·光谷店'],
-    '华东区': ['全选', '茶颜悦色·新街口店', '茶颜悦色·湖滨银泰店', '茶颜悦色·步行街店'],
-    '华南区': ['全选', '茶颜悦色·华强北店', '茶颜悦色·福田店'],
-    '华北区': ['全选', '茶颜悦色·三里屯店'],
-    '西南区': ['全选', '茶颜悦色·春熙路店'],
-  };
+
+  static const treeData = [
+    _TreeItem(name: '华中大区', children: [
+      _TreeItem(name: '长沙商圈', children: [
+        _TreeItem(name: '茶颜悦色·太平街店'),
+        _TreeItem(name: '茶颜悦色·五一广场店'),
+        _TreeItem(name: '茶颜悦色·解放西路店'),
+      ]),
+      _TreeItem(name: '武汉商圈', children: [
+        _TreeItem(name: '茶颜悦色·江汉路店'),
+        _TreeItem(name: '茶颜悦色·光谷店'),
+      ]),
+    ]),
+    _TreeItem(name: '华东大区', children: [
+      _TreeItem(name: '南京商圈', children: [
+        _TreeItem(name: '茶颜悦色·新街口店'),
+      ]),
+      _TreeItem(name: '杭州商圈', children: [
+        _TreeItem(name: '茶颜悦色·湖滨银泰店'),
+        _TreeItem(name: '茶颜悦色·步行街店'),
+      ]),
+    ]),
+    _TreeItem(name: '华南大区', children: [
+      _TreeItem(name: '深圳商圈', children: [
+        _TreeItem(name: '茶颜悦色·华强北店'),
+        _TreeItem(name: '茶颜悦色·福田店'),
+      ]),
+    ]),
+    _TreeItem(name: '华北大区', children: [
+      _TreeItem(name: '北京商圈', children: [
+        _TreeItem(name: '茶颜悦色·三里屯店'),
+      ]),
+    ]),
+    _TreeItem(name: '西南大区', children: [
+      _TreeItem(name: '成都商圈', children: [
+        _TreeItem(name: '茶颜悦色·春熙路店'),
+      ]),
+    ]),
+  ];
 
   const FilterBar({super.key, required this.period, required this.store, required this.onPeriod, required this.onStore});
 
@@ -27,8 +58,9 @@ class _FilterBarState extends State<FilterBar> {
   void _showStorePicker() {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
-      builder: (_) => _StorePicker(
+      builder: (_) => _StoreTree(
         current: widget.store,
         onSelected: (s) {
           widget.onStore(s);
@@ -54,10 +86,7 @@ class _FilterBarState extends State<FilterBar> {
                 width: one,
                 margin: const EdgeInsets.only(right: 8),
                 padding: const EdgeInsets.symmetric(vertical: 8),
-                decoration: BoxDecoration(
-                  color: sel ? AppTheme.primary : AppTheme.bg,
-                  borderRadius: BorderRadius.circular(18),
-                ),
+                decoration: BoxDecoration(color: sel ? AppTheme.primary : AppTheme.bg, borderRadius: BorderRadius.circular(18)),
                 alignment: Alignment.center,
                 child: Text(t, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: sel ? Colors.white : AppTheme.textSecondary)),
               ),
@@ -82,60 +111,94 @@ class _FilterBarState extends State<FilterBar> {
   }
 }
 
-class _StorePicker extends StatelessWidget {
+class _StoreTree extends StatefulWidget {
   final String current;
   final ValueChanged<String> onSelected;
-  const _StorePicker({required this.current, required this.onSelected});
+  const _StoreTree({required this.current, required this.onSelected});
+  @override
+  State<_StoreTree> createState() => _StoreTreeState();
+}
+
+class _StoreTreeState extends State<_StoreTree> {
+  // 展开/折叠状态
+  final Set<String> _expanded = {};
+  // 层级标识: 0=全部, 1=大区, 2=商圈, 3=门店
+  String _level = '';
 
   @override
   Widget build(BuildContext context) {
+    final allSelected = widget.current == '全部门店';
     return Container(
-      height: 460,
+      height: MediaQuery.of(context).size.height * 0.7,
       padding: const EdgeInsets.all(20),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const Text('选择门店', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 4),
+        const Text('四级维度：全部 · 大区 · 商圈 · 门店', style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
         const SizedBox(height: 16),
+        // 全部
+        _node(Icons.public, '全部门店', allSelected, () => widget.onSelected('全部门店'), level: 0),
+        const Divider(height: 20),
         Expanded(child: ListView(children: [
-          // 全部门店
-          _tile(context, '全部门店', current == '全部门店'),
-          const SizedBox(height: 4),
-          ...FilterBar.regions.skip(1).map((region) {
-            final sel = current == region;
-            return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              _tile(context, region, sel),
-              if (sel) ...[
-                const SizedBox(height: 4),
-                ...?FilterBar.stores[region]?.map((s) {
-                  final ssel = current == s;
-                  return Padding(
-                    padding: const EdgeInsets.only(left: 24, bottom: 2),
-                    child: _tile(context, s, ssel, indent: true),
-                  );
-                }),
-              ],
-            ]);
-          }),
+          ...FilterBar.treeData.map((region) => _buildRegion(region)),
         ])),
       ]),
     );
   }
 
-  Widget _tile(BuildContext context, String name, bool sel, {bool indent = false}) {
+  Widget _buildRegion(_TreeItem region) {
+    final sel = widget.current == region.name;
+    final exp = _expanded.contains(region.name);
+    return Column(children: [
+      _node(Icons.place, region.name, sel, () {
+        setState(() => _expanded.contains(region.name) ? _expanded.remove(region.name) : _expanded.add(region.name));
+      }, trailing: AnimatedRotation(turns: exp ? 0.25 : 0, duration: const Duration(milliseconds: 200), child: const Icon(Icons.chevron_right, size: 20, color: AppTheme.textSecondary)), level: 1),
+      if (exp) ...region.children.map((biz) => _buildBiz(biz, region.name)),
+    ]);
+  }
+
+  Widget _buildBiz(_TreeItem biz, String regionName) {
+    final exp = _expanded.contains('$regionName/${biz.name}');
+    return Column(children: [
+      Padding(
+        padding: const EdgeInsets.only(left: 24),
+        child: _node(Icons.business, biz.name, false, () {
+          setState(() => exp ? _expanded.remove('$regionName/${biz.name}') : _expanded.add('$regionName/${biz.name}'));
+        }, trailing: AnimatedRotation(turns: exp ? 0.25 : 0, duration: const Duration(milliseconds: 200), child: const Icon(Icons.chevron_right, size: 18, color: AppTheme.textSecondary)), level: 2),
+      ),
+      if (exp) ...biz.children.map((store) {
+        final ssel = widget.current == store.name;
+        return Padding(
+          padding: const EdgeInsets.only(left: 48),
+          child: _node(Icons.store, store.name, ssel, () => widget.onSelected(store.name), level: 3),
+        );
+      }),
+    ]);
+  }
+
+  Widget _node(IconData icon, String name, bool sel, VoidCallback onTap, {Widget? trailing, int level = 0}) {
+    final colors = [AppTheme.primary, Color(0xFF0EA2B8), Color(0xFFE3811A), AppTheme.success];
+    final color = colors[level.clamp(0, 3)];
     return GestureDetector(
-      onTap: () => onSelected(name),
+      onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         margin: const EdgeInsets.only(bottom: 2),
-        decoration: BoxDecoration(
-          color: sel ? AppTheme.primary.withValues(alpha: 0.06) : null,
-          borderRadius: BorderRadius.circular(8),
-        ),
+        decoration: BoxDecoration(color: sel ? color.withValues(alpha: 0.06) : null, borderRadius: BorderRadius.circular(8)),
         child: Row(children: [
-          if (indent) const SizedBox(width: 8),
-          Expanded(child: Text(name, style: TextStyle(fontSize: 14, fontWeight: sel ? FontWeight.w600 : FontWeight.w400, color: sel ? AppTheme.primary : AppTheme.text))),
-          if (sel) const Icon(Icons.check, color: AppTheme.primary, size: 18),
+          Icon(icon, color: sel ? color : AppTheme.textSecondary, size: level == 3 ? 16 : 18),
+          const SizedBox(width: 8),
+          Expanded(child: Text(name, style: TextStyle(fontSize: level == 3 ? 13 : 14, fontWeight: sel ? FontWeight.w600 : FontWeight.w400, color: sel ? color : AppTheme.text))),
+          if (trailing != null) trailing,
+          if (sel && trailing == null) const Icon(Icons.check, color: AppTheme.primary, size: 18),
         ]),
       ),
     );
   }
+}
+
+class _TreeItem {
+  final String name;
+  final List<_TreeItem> children;
+  const _TreeItem({required this.name, this.children = const []});
 }

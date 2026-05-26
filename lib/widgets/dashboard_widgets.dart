@@ -91,7 +91,7 @@ class HalfKpiCard extends StatelessWidget {
 }
 
 /* ── 趋势图（带刻度） ── */
-class TrendChart extends StatelessWidget {
+class TrendChart extends StatefulWidget {
   final String title;
   final List<double> data;
   final Color color;
@@ -99,16 +99,39 @@ class TrendChart extends StatelessWidget {
   const TrendChart({super.key, required this.title, required this.data, required this.color, this.unit = ''});
 
   @override
+  State<TrendChart> createState() => _TrendChartState();
+}
+
+class _TrendChartState extends State<TrendChart> {
+  int? _hoverIdx;
+
+  @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), boxShadow: const [BoxShadow(color: Color(0x08000000), blurRadius: 8, offset: Offset(0, 2))]),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+        Row(children: [
+          Expanded(child: Text(widget.title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600))),
+          if (_hoverIdx != null) Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: widget.color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)), child: Text('第${_hoverIdx! + 1}天 ${widget.data[_hoverIdx!].toStringAsFixed(0)}${widget.unit}', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: widget.color))),
+        ]),
         const SizedBox(height: 20),
-        SizedBox(height: 160, child: CustomPaint(size: Size.infinite, painter: _TrendP(data: data, color: color, unit: unit))),
+        GestureDetector(
+          onTapDown: (d) => _onTap(d.localPosition, context),
+          onLongPressMoveUpdate: (d) => _onTap(d.localPosition, context),
+          child: SizedBox(height: 160, child: CustomPaint(size: Size.infinite, painter: _TrendP(data: widget.data, color: widget.color, unit: widget.unit, highlightIdx: _hoverIdx))),
+        ),
       ]),
     );
+  }
+
+  void _onTap(Offset pos, BuildContext ctx) {
+    final box = ctx.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    final sz = box.size;
+    final step = sz.width / (widget.data.length - 1);
+    final idx = (pos.dx / step).round().clamp(0, widget.data.length - 1);
+    setState(() => _hoverIdx = idx);
   }
 }
 
@@ -116,7 +139,8 @@ class _TrendP extends CustomPainter {
   final List<double> data;
   final Color color;
   final String unit;
-  _TrendP({required this.data, required this.color, required this.unit});
+  final int? highlightIdx;
+  _TrendP({required this.data, required this.color, required this.unit, this.highlightIdx});
 
   @override
   void paint(Canvas cvs, Size sz) {
@@ -165,10 +189,19 @@ class _TrendP extends CustomPainter {
       tp.text = TextSpan(text: '${s + 1}', style: const TextStyle(fontSize: 9, color: AppTheme.textSecondary));
       tp.layout(); tp.paint(cvs, Offset(s * step - tp.width / 2, sz.height - 14));
     }
+    // Highlight
+    if (highlightIdx != null && highlightIdx! < data.length) {
+      final hx = highlightIdx! * step;
+      final hy = sz.height - bot - ((data[highlightIdx!] - mn) / r) * chartH;
+      cvs.drawLine(Offset(hx, top), Offset(hx, sz.height - bot), Paint()..color = color.withValues(alpha: 0.2)..strokeWidth = 1);
+      cvs.drawCircle(Offset(hx, hy), 6, Paint()..color = Colors.white);
+      cvs.drawCircle(Offset(hx, hy), 5, Paint()..color = color);
+    }
   }
+    
 
   @override
-  bool shouldRepaint(covariant CustomPainter o) => true;
+  bool shouldRepaint(covariant _TrendP old) => old.data != data || old.color != color || old.highlightIdx != highlightIdx;
 }
 
 /* ── 排行榜柱状图 ── */

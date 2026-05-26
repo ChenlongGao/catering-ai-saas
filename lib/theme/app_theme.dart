@@ -37,9 +37,11 @@ class AppTheme {
     Color(0xFF10B981),  // 绿色 - 培训
     Color(0xFFE3811A),  // 金橙 - 选址
     Color(0xFF6366F1),  // 紫色 - 外卖
-    Color(0xFF8B5CF6),  // 紫 - 其他工具
-    Color(0xFF3B82F6),  // 蓝 - AI客流
+    Color(0xFF8B5CF6),  // 紫 - 培训管理
+    Color(0xFF3B82F6),  // 蓝 - 客流分析
   ];
+  static const Color trafficColor = Color(0xFF3B82F6);
+  static const Color trainingColor = Color(0xFF8B5CF6);
 
   static ThemeData get lightTheme {
     return ThemeData(

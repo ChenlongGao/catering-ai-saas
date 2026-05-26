@@ -11,8 +11,10 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
-  String _period = '今日';
+  String _period = '近30天';
   String _store = '全部门店';
+
+  // 时段数据
 
   // 根据时段返回不同数据
   double _rev() { switch (_period) { case '昨日': return 46768; case '近7天': return 323840; case '近30天': return 1385600; default: return 52380; } }
@@ -26,7 +28,7 @@ class _DashboardPageState extends State<DashboardPage> {
     return Scaffold(
       appBar: AppBar(
         title: Row(children: [Image.asset('assets/images/logo.png', width: 32, height: 32), const SizedBox(width: 10), const Text('云盯360')]),
-        actions: [IconButton(icon: const Icon(Icons.notifications_outlined, size: 22), onPressed: () {}), IconButton(icon: const Icon(Icons.person_outline, size: 22), onPressed: () {})],
+        actions: [IconButton(icon: const Icon(Icons.notifications_outlined, size: 22), onPressed: () {})],
       ),
       body: Column(children: [
         FilterBar(period: _period, store: _store, onPeriod: (p) => setState(() => _period = p), onStore: (s) => setState(() => _store = s)),
@@ -116,7 +118,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
   // ═══ 客流 ═══
   Widget _traffic() {
-    final vc = AppTheme.appColors[5]; // blue
+    final vc = AppTheme.trafficColor; // blue
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       SecTitle(text: '客流分析', icon: Icons.people, color: vc),
       FullKpiCard(value: '18,560', label: '今日总客流（人次）', trend: '+15%', trendUp: true),
@@ -195,7 +197,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
   // ═══ 培训 ═══
   Widget _training() {
-    final tc = AppTheme.appColors[4]; // purple
+    final tc = AppTheme.trainingColor; // purple
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       SecTitle(text: '培训管理', icon: Icons.school, color: tc),
       FullKpiCard(value: '82%', label: '培训完成率', trend: '+6%', trendUp: true),

@@ -3,119 +3,66 @@ import '../../theme/app_theme.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
-
   @override
   State<SplashPage> createState() => _SplashPageState();
 }
 
-class _SplashPageState extends State<SplashPage> {
+class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _opacity;
+
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        Navigator.of(context).pushReplacementNamed('/home');
-      }
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 2200));
+    _opacity = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.0), weight: 28),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.0), weight: 60),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 12),
+    ]).animate(_ctrl);
+    _ctrl.forward();
+    _ctrl.addStatusListener((s) {
+      if (s == AnimationStatus.completed && mounted) Navigator.of(context).pushReplacementNamed('/home');
     });
   }
 
   @override
+  void dispose() { _ctrl.dispose(); super.dispose(); }
+
+  @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFB),
+      body: AnimatedBuilder(
+        animation: _opacity,
+        builder: (_, child) => Opacity(opacity: _opacity.value, child: child),
         child: Column(
           children: [
-            Spacer(),
-            // Logo with accent ring
-            _LogoWidget(),
-            Spacer(),
-            // Brand text
-            _BrandText(),
-            SizedBox(height: 48),
+            SizedBox(height: MediaQuery.of(context).size.height * 0.12),
+            // Logo 独立悬浮卡片
+            Center(
+              child: Container(
+                padding: const EdgeInsets.all(28),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: const [BoxShadow(color: Color(0x140EA2B8), blurRadius: 32, offset: Offset(0, 6))],
+                ),
+                child: Image.asset('assets/images/logo.png', width: 120, height: 120),
+              ),
+            ),
+            const SizedBox(height: 24),
+            // 品牌名
+            const Text('云盯360', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: AppTheme.text, letterSpacing: 1)),
+            const Spacer(),
+            // 底部副标题
+            const Text('智能门店管理专家', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: AppTheme.text)),
+            const SizedBox(height: 8),
+            const Text('AI驱动数字化经营管理', style: TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
+            const SizedBox(height: 40),
           ],
         ),
       ),
-    );
-  }
-}
-
-class _LogoWidget extends StatelessWidget {
-  const _LogoWidget();
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Accent ring
-        Container(
-          width: 172,
-          height: 172,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: AppTheme.primary.withValues(alpha: 0.12), width: 2),
-          ),
-          child: Center(
-            child: Container(
-              width: 136,
-              height: 136,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppTheme.primary.withValues(alpha: 0.06),
-              ),
-              child: const Center(
-                child: Image(
-                  image: AssetImage('assets/images/logo.png'),
-                  width: 100,
-                  height: 100,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _BrandText extends StatelessWidget {
-  const _BrandText();
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          '云盯360',
-          style: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.w700,
-            color: AppTheme.text,
-            letterSpacing: 6,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Container(
-          width: 32,
-          height: 3,
-          decoration: BoxDecoration(
-            color: AppTheme.primary,
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
-        const SizedBox(height: 14),
-        Text(
-          '智能AI餐饮',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w400,
-            color: AppTheme.textSecondary,
-            letterSpacing: 8,
-          ),
-        ),
-      ],
     );
   }
 }
