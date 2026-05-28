@@ -18,7 +18,7 @@ class _LocationPageState extends State<LocationPage> {
   bool _analysisDone = false;
   int _analysisStep = 0;
   final List<String> _steps = ['查询周边客流数据', '扫描竞品门店分布', '测算预估营收模型', '评估风险因素', '生成选址报告'];
-  final List<String> _streetPhotos = [];
+  final Map<String, List<String>> _streetPhotos = {'店招环境': [], '人流动线': [], '竞品门店': []};
 
   final List<_LocationItem> _history = _generateData();
   List<_LocationItem> get _favorites => _history.where((h) => h.favorited).toList();
@@ -32,6 +32,7 @@ class _LocationPageState extends State<LocationPage> {
       score: 70 + rng.nextInt(21),
       date: DateTime.now().subtract(Duration(days: i * 4 + 1)),
       favorited: i % 2 == 0,
+      photos: List.generate(12, (j) => 'photo_${i}_${j}'),
     ));
   }
 
@@ -67,32 +68,13 @@ class _LocationPageState extends State<LocationPage> {
           const SizedBox(height: 20),
           // 拍照打卡扫街
           Container(padding: const EdgeInsets.all(16), decoration: AppTheme.cardDecoration, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              const Icon(Icons.camera_alt, color: AppTheme.accent, size: 18), const SizedBox(width: 8),
-              const Text('拍照打卡扫街', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-              const Spacer(),
-              GestureDetector(
-                onTap: () {
-                  if (_streetPhotos.length >= 12) return;
-                  setState(() => _streetPhotos.add('photo_${DateTime.now().millisecondsSinceEpoch}'));
-                  // 模拟解析地址填入
-                  if (_streetPhotos.length == 1) _addressCtrl.text = '长沙市天心区解放西路88号（照片定位）';
-                },
-                child: Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6), decoration: BoxDecoration(color: AppTheme.accent.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(8)), child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  const Icon(Icons.camera, color: AppTheme.accent, size: 14), const SizedBox(width: 4),
-                  Text('拍照 ${_streetPhotos.length}/12', style: const TextStyle(fontSize: 12, color: AppTheme.accent, fontWeight: FontWeight.w500)),
-                ])),
-              ),
-            ]),
+            const Row(children: [Icon(Icons.camera_alt, color: AppTheme.accent, size: 18), SizedBox(width: 8), Text('拍照打卡扫街', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600))]),
             const SizedBox(height: 12),
-            if (_streetPhotos.isEmpty)
-              Row(children: [
-                _photoSlot('店招环境'), const SizedBox(width: 10),
-                _photoSlot('人流动线'), const SizedBox(width: 10),
-                _photoSlot('竞品门店'),
-              ])
-            else
-              Wrap(spacing: 8, runSpacing: 8, children: _streetPhotos.map((p) => Container(width: 80, height: 80, decoration: BoxDecoration(color: AppTheme.accent.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(10)), child: const Center(child: Icon(Icons.image, color: AppTheme.accent, size: 32)))).toList()),
+            _streetCategory('店招环境'),
+            const SizedBox(height: 12),
+            _streetCategory('人流动线'),
+            const SizedBox(height: 12),
+            _streetCategory('竞品门店'),
           ])),
           const SizedBox(height: 20),
           // 餐饮业态参数
@@ -144,11 +126,35 @@ class _LocationPageState extends State<LocationPage> {
     ]));
   }
 
-  Widget _photoSlot(String label) {
-    return Expanded(child: Container(height: 100, decoration: BoxDecoration(color: AppTheme.bg, borderRadius: BorderRadius.circular(10), border: Border.all(color: AppTheme.divider)), child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-      Icon(Icons.add_a_photo, color: AppTheme.textSecondary.withValues(alpha: 0.5), size: 24),
-      const SizedBox(height: 6), Text(label, style: TextStyle(fontSize: 11, color: AppTheme.textSecondary.withValues(alpha: 0.7))),
-    ])));
+  Widget _streetCategory(String label) {
+    final photos = _streetPhotos[label] ?? [];
+    final color = label == '店招环境' ? AppTheme.accent : label == '人流动线' ? AppTheme.primary : Color(0xFFE3811A);
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [
+        Icon(Icons.camera_alt, color: color, size: 16), const SizedBox(width: 6),
+        Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: color)),
+        const Spacer(),
+        GestureDetector(
+          onTap: () {
+            if (photos.length >= 4) return;
+            setState(() => _streetPhotos[label] = [...photos, 'photo_${DateTime.now().millisecondsSinceEpoch}']);
+            if (_addressCtrl.text.isEmpty) _addressCtrl.text = '长沙市天心区解放西路88号';
+          },
+          child: Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: color.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(6)), child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.add, size: 12, color: color), const SizedBox(width: 2), Text('拍照 ${photos.length}/4', style: TextStyle(fontSize: 11, color: color))])),
+        ),
+      ]),
+      const SizedBox(height: 8),
+      if (photos.isEmpty)
+        Container(height: 80, decoration: BoxDecoration(color: AppTheme.bg, borderRadius: BorderRadius.circular(10), border: Border.all(color: AppTheme.divider)), child: Center(child: Icon(Icons.add_a_photo, color: AppTheme.textSecondary.withValues(alpha: 0.4), size: 28)))
+      else
+        LayoutBuilder(builder: (ctx, c) {
+          final w = (c.maxWidth - 24) / 4;
+          return Wrap(spacing: 8, runSpacing: 8, children: photos.map((p) => Stack(children: [
+            Container(width: w, height: w, decoration: BoxDecoration(color: color.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(8)), child: Center(child: Icon(Icons.image, color: color, size: w * 0.4))),
+            Positioned(top: 2, right: 2, child: GestureDetector(onTap: () => setState(() => _streetPhotos[label] = photos.where((x) => x != p).toList()), child: Container(width: 16, height: 16, decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.black54), child: const Icon(Icons.close, color: Colors.white, size: 10)))),
+          ])).toList());
+        }),
+    ]);
   }
 
   void _simulateAnalysis() {
@@ -190,7 +196,16 @@ class _LocationPageState extends State<LocationPage> {
         const SizedBox(height: 32),
         Row(children: [
           Expanded(child: ElevatedButton(
-            onPressed: _analysisDone ? () => setState(() => _isAnalyzing = false) : null,
+            onPressed: _analysisDone ? () {
+              Navigator.of(context).push(MaterialPageRoute(builder: (_) => _LocationReportPage(item: _LocationItem(
+                id: DateTime.now().millisecondsSinceEpoch.toString(),
+                name: _cuisineCtrl.text.isNotEmpty ? _cuisineCtrl.text : '选址分析',
+                address: _addressCtrl.text.isNotEmpty ? _addressCtrl.text : '待定地址',
+                score: 85,
+                date: DateTime.now(),
+                photos: _streetPhotos.values.expand((x) => x).toList(),
+              ))));
+            } : null,
             style: ElevatedButton.styleFrom(backgroundColor: _analysisDone ? const Color(0xFF059669) : const Color(0xFF059669).withValues(alpha: 0.2), padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), disabledBackgroundColor: const Color(0xFF059669).withValues(alpha: 0.15)),
             child: Text('查看分析报告', style: TextStyle(fontSize: 15, color: _analysisDone ? Colors.white : Colors.white70)),
           )),
@@ -269,23 +284,26 @@ class _LocationReportPageState extends State<_LocationReportPage> {
   @override
   void initState() {
     super.initState();
-    _fav = widget.item.favorited;
+    _fav = widget.item.favorited || widget.item.score >= 80;
   }
 
   @override
   Widget build(BuildContext context) {
     final rng = Random(widget.item.id.hashCode);
+    final high = widget.item.score >= 80;
     return Scaffold(
       appBar: AppBar(title: Text(widget.item.name)),
       body: SingleChildScrollView(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        // 评分卡
+        // 评分卡 - 80分以上绿渐变，以下黄渐变
         Container(
           width: double.infinity, padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFF059669), Color(0xFF10B981)]), borderRadius: BorderRadius.circular(16)),
+          decoration: BoxDecoration(gradient: LinearGradient(
+            colors: high ? [const Color(0xFF059669), const Color(0xFF10B981)] : [const Color(0xFFD97706), const Color(0xFFF59E0B)],
+          ), borderRadius: BorderRadius.circular(16)),
           child: Column(children: [
             const Text('选址综合评分', style: TextStyle(fontSize: 14, color: Colors.white70)),
             const SizedBox(height: 8), Text('${widget.item.score}', style: const TextStyle(fontSize: 64, fontWeight: FontWeight.bold, color: Colors.white)),
-            Text(widget.item.address, style: const TextStyle(fontSize: 13, color: Colors.white60)),
+            Text(high ? '推荐选址 · 已自动收藏' : '需谨慎评估', style: TextStyle(fontSize: 13, color: Colors.white60)),
           ]),
         ),
         const SizedBox(height: 20),
@@ -302,6 +320,19 @@ class _LocationReportPageState extends State<_LocationReportPage> {
         _reportCard('客流画像', Icons.person_pin, Color(0xFFE3811A), '主力客群', '18-35岁', '消费力', '¥20-35/客', '核心客群为18-35岁年轻女性，占比约65%。消费习惯偏社交分享型，线上种草转化率高。周末家庭客群占比提升至25%。', _chartData(['18-25','25-30','30-35','35-40','40+'], [40, 25, 15, 12, 8].map((e) => e.toDouble()).toList(), color: Color(0xFFE3811A))),
         _reportCard('周边人口', Icons.people, Color(0xFF8B5CF6), '常住人口', '${15 + rng.nextInt(10)}万', '写字楼密度', '${8 + rng.nextInt(7)}栋', '周边1公里范围内常住人口约18-25万，写字楼从业人口约12万。住宅与办公混合区域，全天候客流保障度高。', _chartData(['住宅','办公','商业','学校','医疗','其他'], List.generate(6, (_) => 5.0 + rng.nextInt(25).toDouble()), color: Color(0xFF8B5CF6))),
         _reportCard('周边交通', Icons.train, Color(0xFFEF4444), '地铁站', '${rng.nextInt(2) + 1}个', '公交线路', '${8 + rng.nextInt(12)}条', '距离最近地铁站约200米，步行3分钟可达。周边公交覆盖密集，停车位充足。交通便利度评分8.5/10。', _chartData(['地铁','公交','骑行','步行','驾车','出租'], List.generate(6, (_) => 10.0 + rng.nextInt(60).toDouble()), color: Color(0xFFEF4444))),
+        // 街拍图片
+        if (widget.item.photos.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppTheme.divider)), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Row(children: [Icon(Icons.photo_library, color: AppTheme.accent, size: 18), SizedBox(width: 8), Text('现场街拍', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600))]),
+            const SizedBox(height: 12),
+            _photoRow('店招环境', widget.item.photos.take(4).toList()),
+            const SizedBox(height: 10),
+            _photoRow('人流动线', widget.item.photos.skip(4).take(4).toList()),
+            const SizedBox(height: 10),
+            _photoRow('竞品门店', widget.item.photos.skip(8).take(4).toList()),
+          ])),
+        ],
         const SizedBox(height: 20),
         // 底部操作
         Container(padding: const EdgeInsets.all(16), decoration: AppTheme.cardDecoration, child: Row(children: [
@@ -365,6 +396,26 @@ class _LocationReportPageState extends State<_LocationReportPage> {
     ]));
   }
 
+  Widget _photoRow(String label, List<String> photos) {
+    if (photos.isEmpty) return const SizedBox.shrink();
+    final color = label == '店招环境' ? AppTheme.accent : label == '人流动线' ? AppTheme.primary : Color(0xFFE3811A);
+    final list = photos.take(4).toList();
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color)),
+      const SizedBox(height: 6),
+      LayoutBuilder(builder: (ctx, c) {
+        final w = (c.maxWidth - 8 * 3) / 4;
+        return Row(children: List.generate(list.length, (i) => Padding(
+          padding: EdgeInsets.only(right: i < list.length - 1 ? 8 : 0),
+          child: GestureDetector(
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => _ImageViewPage(label: '$label照片'))),
+            child: Container(width: w, height: w, decoration: BoxDecoration(color: color.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(8)), child: Center(child: Icon(Icons.image, color: color, size: w * 0.4))),
+          ),
+        )));
+      }),
+    ]);
+  }
+
   Widget _reportCard(String title, IconData icon, Color color, String m1Label, String m1Val, String m2Label, String m2Val, String aiText, List<_ChartPoint> chartData) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12), padding: const EdgeInsets.all(16),
@@ -426,10 +477,31 @@ class _LocationItem {
   final int score;
   final DateTime date;
   final bool favorited;
-  const _LocationItem({required this.id, required this.name, required this.address, required this.score, required this.date, this.favorited = false});
+  final List<String> photos;
+  const _LocationItem({required this.id, required this.name, required this.address, required this.score, required this.date, this.favorited = false, this.photos = const []});
 }
 
 // ── 图表数据 ──
+// ── 图片查看页 ──
+class _ImageViewPage extends StatelessWidget {
+  final String label;
+  const _ImageViewPage({required this.label});
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(title: Text(label, style: const TextStyle(color: Colors.white)), backgroundColor: Colors.black, iconTheme: const IconThemeData(color: Colors.white)),
+      body: Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Container(width: MediaQuery.of(context).size.width * 0.85, height: MediaQuery.of(context).size.width * 0.85, decoration: BoxDecoration(color: Colors.white12, borderRadius: BorderRadius.circular(12)), child: const Center(child: Icon(Icons.image, color: Colors.white38, size: 80))),
+        const SizedBox(height: 20),
+        const Text('街拍现场图', style: TextStyle(color: Colors.white70, fontSize: 14)),
+        const SizedBox(height: 8),
+        Text(label, style: const TextStyle(color: Colors.white38, fontSize: 12)),
+      ])),
+    );
+  }
+}
+
 class _ChartPoint {
   final String label;
   final double value;
